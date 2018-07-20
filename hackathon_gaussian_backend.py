@@ -17,13 +17,36 @@ my_init_params = [make_param(constant=0.1, name='squeeze_0', regularize=True, mo
                   make_param(constant=0.1, name='displacement_0', regularize=True, monitor=True),
                   make_param(constant=0.1, name='displacement_1', regularize=True, monitor=True),
                   make_param(constant=0.1, name='displacement_2', regularize=True, monitor=True),
-                  make_param(constant=0.1, name='displacement_3', regularize=True, monitor=True)]
+                  make_param(constant=0.1, name='displacement_3', regularize=True, monitor=True),
+                  make_param(constant=0.1, name='bs_00', regularize=True, monitor=True),
+                  make_param(constant=0.1, name='bs_01', regularize=True, monitor=True),
+                  make_param(constant=0.1, name='bs_10', regularize=True, monitor=True),
+                  make_param(constant=0.1, name='bs_11', regularize=True, monitor=True),
+                  make_param(constant=0.1, name='bs_20', regularize=True, monitor=True),
+                  make_param(constant=0.1, name='bs_21', regularize=True, monitor=True),
+                  make_param(constant=0.1, name='bs_30', regularize=True, monitor=True),
+                  make_param(constant=0.1, name='bs_31', regularize=True, monitor=True)]
 
-c = 0
+c = 1
 A = np.array([[c,-2,-10,1],
               [-2,c,1,5],
               [-10,1,c,-2],
               [1,5,-2,c]])
+
+A = np.array([[c,3,0,-5],
+              [3,c,-5,8],
+              [0,-5,c,0],
+              [-5,8,0,c]])
+
+# A = np.array([[c,2,-10,0],
+#               [2,c,0,-5],
+#               [-10,0,c,2],
+#               [0,-5,2,c]])
+
+# A = np.array([[c,10,-2,-8],
+#               [10,c,-8,7],
+#               [-2,-8,c,10],
+#               [-8,7,10,c]])
 
 
 # def digitize_xp(value):
@@ -138,42 +161,10 @@ def circuit(A, n_qmodes, params):
         Dgate(params[6]) | q[2]
         Dgate(params[7]) | q[3]
 
-        # Rgate(3.064) | (q[0])
-        # BSgate(0.01046, 0) | (q[0], q[1])
-        # Rgate(-1.865) | (q[2])
-        # BSgate(5.591e-14, 0) | (q[2], q[3])
-        # Rgate(2.979) | (q[1])
-        # BSgate(1.571, 0) | (q[1], q[2])
-        # Rgate(1.253) | (q[0])
-        # BSgate(1.571, 0) | (q[0], q[1])
-        # Rgate(-1.991) | (q[0])
-        # Rgate(1.335) | (q[1])
-        # Rgate(-0.982) | (q[2])
-        # Rgate(2.216) | (q[3])
-        # BSgate(-8.002e-13, 0) | (q[2], q[3])
-        # Rgate(0.5906) | (q[2])
-        # BSgate(-0.01046, 0) | (q[1], q[2])
-        # Rgate(-0.1513) | (q[1])
-        # Sgate(-0.06962, 0) | (q[0])
-        # Sgate(-0.06714, 3.142) | (q[1])
-        # Sgate(-0.05428, 3.142) | (q[2])
-        # Sgate(-0.05349, 0) | (q[3])
-        # Rgate(-1.571) | (q[0])
-        # BSgate(1.234, 0) | (q[0], q[1])
-        # Rgate(-1.571) | (q[2])
-        # BSgate(0.3369, 0) | (q[2], q[3])
-        # Rgate(-1.571) | (q[1])
-        # BSgate(0.1581, 0) | (q[1], q[2])
-        # Rgate(-1.571) | (q[0])
-        # BSgate(1.119, 0) | (q[0], q[1])
-        # Rgate(-2.356) | (q[0])
-        # Rgate(0.7854) | (q[1])
-        # Rgate(-2.356) | (q[2])
-        # Rgate(-2.356) | (q[3])
-        # BSgate(-1.119, 0) | (q[2], q[3])
-        # Rgate(3.142) | (q[2])
-        # BSgate(-1.472, 0) | (q[1], q[2])
-        # Rgate(-3.142) | (q[1])
+        BSgate(params[8], params[9])  | (q[0], q[1])
+        BSgate(params[10], params[11]) | (q[2], q[3])
+        BSgate(params[12], params[13])   | (q[1], q[2])
+
 
     return eng, q
 
@@ -249,7 +240,7 @@ def main():
 
   learner = CircuitLearner(hyperparams=hyperparams)
 
-  learner.train_circuit(steps=100)
+  learner.train_circuit(steps=50)
 
   # Print out the final parameters
   final_params = learner.get_circuit_parameters()
@@ -270,8 +261,14 @@ def main():
   final_params_translated.append(final_params["regularized/displacement_1"])
   final_params_translated.append(final_params["regularized/displacement_2"])
   final_params_translated.append(final_params["regularized/displacement_3"])
-  # final_params_translated.append(final_params["regularized/rotation_0"])
-  # final_params_translated.append(final_params["regularized/rotation_1"])
+  final_params_translated.append(final_params["regularized/bs_00"])
+  final_params_translated.append(final_params["regularized/bs_01"])
+  final_params_translated.append(final_params["regularized/bs_10"])
+  final_params_translated.append(final_params["regularized/bs_11"])
+  final_params_translated.append(final_params["regularized/bs_20"])
+  final_params_translated.append(final_params["regularized/bs_21"])
+  final_params_translated.append(final_params["regularized/bs_30"])
+  final_params_translated.append(final_params["regularized/bs_31"])
 
   for i in range(1):
       bits = get_bits_from_circuit(A, n_qmodes, final_params_translated)
