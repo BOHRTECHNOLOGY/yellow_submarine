@@ -5,7 +5,8 @@ from qmlt.numerical import CircuitLearner
 from qmlt.numerical.helpers import make_param
 from qmlt.numerical.regularizers import l2
 from functools import partial, partialmethod
-
+import itertools
+from collections import Counter
 import pdb
 
 class ParametrizedGate(object):
@@ -51,13 +52,18 @@ class MaxCutSolver(object):
         for name, value in final_params.items():
             print("Parameter {} has the final value {}.".format(name, value))
 
-        trials = 100
+        trials = 1000
         cost_value = 0
+        all_results = []
         for i in range(trials):
             encoding = self.get_encoding_from_circuit(gate_params=list(final_params.values()))
+            string_encoding = [str(int((np.sign(bit) + 1) / 2)) for bit in encoding]
+            all_results.append(", ".join(string_encoding))
             cost_value += self.calculate_cost_once(encoding)
         cost_value = -cost_value / trials
         print("Cost value:", cost_value)
+        print(Counter(all_results))
+
 
     def create_circuit_evaluator(self, params):
         trials = self.training_params['trials']
@@ -164,6 +170,11 @@ class MaxCutSolver(object):
                 cost_value += 0.25 * self.A[i][j] * (encoding[i] - encoding[j])**2
         return cost_value
 
+    def assess_all_solutions_clasically(self):
+        all_possible_solutions = list(itertools.product([0, 1], repeat=len(self.A)))
+        for solution in all_possible_solutions:
+            print(solution, self.calculate_cost_once(solution))
+
 
 def regularizer(regularized_params):
     return l2(regularized_params)
@@ -198,8 +209,8 @@ def main():
         }
 
     training_params = {
-        'steps': 2,
-        'trials': 1,
+        'steps': 50,
+        'trials': 100,
         'measure': True
         }
 
@@ -216,6 +227,7 @@ def main():
     #               make_param(constant=0.1, name='bs_01', regularize=True, monitor=True)]))
     max_cut_solver = MaxCutSolver(learner_params, training_params, graph_params, gates_structure)
     max_cut_solver.train_and_evaluate_circuit()
+    max_cut_solver.assess_all_solutions_clasically()
 
 if __name__ == '__main__':
     main()
