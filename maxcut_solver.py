@@ -4,8 +4,9 @@ import numpy as np
 from qmlt.numerical import CircuitLearner
 from qmlt.numerical.helpers import make_param
 from qmlt.numerical.regularizers import l2
-import pdb
+from functools import partial, partialmethod
 
+import pdb
 
 class MaxCutSolver(object):
     """This method allows to embed graphs as """
@@ -16,7 +17,7 @@ class MaxCutSolver(object):
         self.gates_structure = gates_structure
         self.base = graph_params['base']
         self.A = graph_params['A']
-        self.learner_params['init_circuit_params'] = self.get_list_of_gate_params()
+        # self.learner_params['init_circuit_params'] = self.get_list_of_gate_params()
 
         if self.base == "x":
             n_qmodes = self.A.shape[0]
@@ -24,30 +25,29 @@ class MaxCutSolver(object):
             n_qmodes = 0.5 * self.A.shape[0]
 
         self.n_qmodes = n_qmodes
-        self.circuit = self.build_circuit()
         self.learner = None
 
     def get_list_of_gate_params(self):
         self.gates_structure
         return []
 
-    def train_and_evaluate_circuit(self):
+    def train_circuit(self):
         #TODO: circuit should be circuit and not evaluation of circuit. 
         #TODO: check how it works in QMLT and correct if needed.
 
-        self.learner_params['circuit'] = self.create_circuit_evaluator()
+        self.learner_params['circuit'] = self.create_circuit_evaluator
         self.learner = CircuitLearner(hyperparams=self.learner_params)
         self.learner.train_circuit(steps=self.training_params['steps'])
 
         #TODO: evaluate circuit()
-        
-    def create_circuit_evaluator(self):
-        #TODO: Damn... this function should not be coupled with the class, it should be independent,,
-        # so I can pass it to the optimizer.
+
+
+    def create_circuit_evaluator(self, params):
+        # TODO: description
         trials = self.training_params['trials']
         cost_value = 0
         for i in range(trials):
-            bits = self.get_bits_from_circuit()
+            bits = self.get_bits_from_circuit(gate_params=params)
             cost_value += self.calculate_cost_once(bits)
         cost_value = -cost_value / trials
 
@@ -55,20 +55,20 @@ class MaxCutSolver(object):
 
         return cost_value, log
 
-    def build_circuit(self):
+
+    def build_circuit(self, gate_params):
         eng, q = sf.Engine(self.n_qmodes)
         cov_matrix = self.create_cov_matrix()
         with eng:
-            # beamsplitter array
             Gaussian(cov_matrix) | q
             # for gate in self.gates_structure:
             #     for qmode in range(self.n_qmodes):
             #         # TODO!!!
-            #         gate(params[i]) | q[qmode]
+            #         gate(gate_params[i]) | q[qmode]
 
-            # BSgate(params[8], params[9])  | (q[0], q[1])
-            # BSgate(params[10], params[11]) | (q[2], q[3])
-            # BSgate(params[12], params[13])   | (q[1], q[2])
+            # BSgate(gate_params[8], gate_params[9])  | (q[0], q[1])
+            # BSgate(gate_params[10], gate_params[11]) | (q[2], q[3])
+            # BSgate(gate_params[12], gate_params[13])   | (q[1], q[2])
         circuit = {}
         circuit['eng'] = eng
         circuit['q'] = q
@@ -80,27 +80,28 @@ class MaxCutSolver(object):
         c = self.graph_params['c']
         d = self.graph_params['d']
         
-        I = np.eye(2*self.n_qmodes)
-        X_top = np.hstack((np.zeros((self.n_qmodes,self.n_qmodes)),np.eye(self.n_qmodes)))
-        X_bot = np.hstack((np.eye(self.n_qmodes),np.zeros((self.n_qmodes,self.n_qmodes))))
+        I = np.eye(2 * self.n_qmodes)
+        X_top = np.hstack((np.zeros((self.n_qmodes, self.n_qmodes)), np.eye(self.n_qmodes)))
+        X_bot = np.hstack((np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
         X = np.vstack((X_top, X_bot))
 
         if base == "x":
             zeros = np.zeros((self.n_qmodes,self.n_qmodes))
             c_prim = self.graph_params['c_prim']
-            A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2*self.n_qmodes)*c_prim
-            cov_matrix = np.linalg.inv(I - X@(d*A_prim)) - I/2
+            A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2 * self.n_qmodes) * c_prim
+            cov_matrix = np.linalg.inv(I - X@(d * A_prim)) - I/2
         elif base == "xp":
-            cov_matrix = np.linalg.inv(I - X@(d*A)) - I/2
+            cov_matrix = np.linalg.inv(I - X@(d * A)) - I/2
         return cov_matrix
 
-    def get_bits_from_circuit(self):
+    def get_bits_from_circuit(self, gate_params):
 
         def value_to_bit(value):
             return np.tanh(value)
 
         #TODO: rename bits to something more meaningful
-        eng = self.circuit['eng']
+        circuit = self.build_circuit(gate_params)
+        eng = circuit['eng']
         state = eng.run("gaussian")
       
         mu_list = []
@@ -117,7 +118,7 @@ class MaxCutSolver(object):
                     x_list.append(np.random.multivariate_normal(mu_list[i], cov_list[i])[0])
             else:
                 for i in range(self.n_qmodes):
-                    x_list.append(mu_list[i])
+                    x_list.append(mu_list[i][0])
             for x in x_list:
                 bits.append(value_to_bit(x))
 
@@ -149,11 +150,14 @@ def loss_function(circuit_output):
     return circuit_output
 
 def main():
+    my_init_params = [make_param(constant=0.1, name='squeeze_0', regularize=True, monitor=True),
+                      make_param(constant=0.1, name='squeeze_1', regularize=True, monitor=True)]
+
     c = 1
-    A = np.array([[c,-2,-10,1],
-        [-2,c,1,5],
-        [-10,1,c,-2],
-        [1,5,-2,c]])
+    A = np.array([[c, -2, -10, 1],
+        [-2, c, 1, 5],
+        [-10, 1, c, -2],
+        [1, 5, -2, c]])
 
     graph_params = {}
     graph_params['c'] = 1
@@ -162,8 +166,8 @@ def main():
     graph_params['A'] = A
     graph_params['base'] = 'x' #'xp'
 
-
     learner_params = {
+        'init_circuit_params': my_init_params,
         'task': 'optimization',
         'loss': loss_function,
         'regularizer': regularizer,
@@ -174,14 +178,14 @@ def main():
         'plot': True
         }
     training_params = {
-        'steps': 50,
+        'steps': 10,
         'trials': 1,
-        'measure': False
+        'measure': True
         }
 
     gates_structure = {}
     max_cut_solver = MaxCutSolver(learner_params, training_params, graph_params, gates_structure)
-    max_cut_solver.train_and_evaluate_circuit()
+    max_cut_solver.train_circuit()
 
 if __name__ == '__main__':
     main()
