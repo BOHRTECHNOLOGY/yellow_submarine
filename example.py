@@ -1,6 +1,4 @@
 from maxcut_solver import MaxCutSolver, ParametrizedGate
-from maxcut_solver import regularizer
-from maxcut_solver import loss_function
 from strawberryfields.ops import *
 from qmlt.numerical.helpers import make_param
 
@@ -20,40 +18,36 @@ def main():
     graph_params['A'] = A
     graph_params['base'] = 'x' #'xp'
 
-    learner_params = {
-        'task': 'optimization',
-        'loss': loss_function,
-        'regularizer': regularizer,
-        'regularization_strength': 0.5,
-        'optimizer': 'SGD',
-        'init_learning_rate': 1e-7,
-        'log_every': 1,
-        'plot': True
-        }
-
-    training_params = {
-        'steps': 3,
-        'trials': 1,
-        'measure': True
-        }
-
-# Measure false params:
     # learner_params = {
     #     'task': 'optimization',
-    #     'loss': loss_function,
-    #     'regularizer': regularizer,
     #     'regularization_strength': 0.5,
     #     'optimizer': 'SGD',
-    #     'init_learning_rate': 6e-3,
+    #     'init_learning_rate': 1e-7,
     #     'log_every': 1,
     #     'plot': True
     #     }
 
     # training_params = {
-    #     'steps': 10,
+    #     'steps': 2,
     #     'trials': 1,
-    #     'measure': False
+    #     'measure': True
     #     }
+
+# Measure false params:
+    learner_params = {
+        'task': 'optimization',
+        'regularization_strength': 0.5,
+        'optimizer': 'SGD',
+        'init_learning_rate': 6e-3,
+        'log_every': 1,
+        'plot': True
+        }
+
+    training_params = {
+        'steps': 50,
+        'trials': 10,
+        'measure': False
+        }
 
 
     gates_structure = []

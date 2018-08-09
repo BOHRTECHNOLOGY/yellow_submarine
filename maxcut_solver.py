@@ -20,6 +20,8 @@ class MaxCutSolver(object):
     """This method allows to embed graphs as """
     def __init__(self, learner_params, training_params, graph_params, gates_structure):
         self.learner_params = learner_params
+        self.learner_params['loss'] = self.loss_function
+        self.learner_params['regularizer'] = self.regularizer
         self.training_params = training_params
         self.graph_params = graph_params
         self.gates_structure = gates_structure
@@ -34,6 +36,26 @@ class MaxCutSolver(object):
 
         self.n_qmodes = n_qmodes
         self.learner = None
+
+    def create_cov_matrix(self):
+        base = self.graph_params['base']
+        A = self.graph_params['A']
+        c = self.graph_params['c']
+        d = self.graph_params['d']
+        
+        I = np.eye(2 * self.n_qmodes)
+        X_top = np.hstack((np.zeros((self.n_qmodes, self.n_qmodes)), np.eye(self.n_qmodes)))
+        X_bot = np.hstack((np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
+        X = np.vstack((X_top, X_bot))
+
+        if base == "x":
+            zeros = np.zeros((self.n_qmodes,self.n_qmodes))
+            c_prim = self.graph_params['c_prim']
+            A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2 * self.n_qmodes) * c_prim
+            cov_matrix = np.linalg.inv(I - X@(d * A_prim)) - I/2
+        elif base == "xp":
+            cov_matrix = np.linalg.inv(I - X@(d * A)) - I/2
+        return cov_matrix
 
     def get_list_of_gate_params(self):
         init_params = []
@@ -55,27 +77,21 @@ class MaxCutSolver(object):
         cost_value = 0
         all_results = []
         for i in range(trials):
-            encoding = self.get_encoding_from_circuit(gate_params=list(final_params.values()))
-            string_encoding = [str(int((np.sign(bit) + 1) / 2)) for bit in encoding]
+            circuit_output = self.get_circuit_output(gate_params=list(final_params.values()))
+            string_encoding = [str(int((np.sign(bit) + 1) / 2)) for bit in circuit_output]
             all_results.append(", ".join(string_encoding))
-            cost_value += self.calculate_cost_once(encoding)
+            cost_value += self.loss_function([circuit_output])
         cost_value = -cost_value / trials
         print("Cost value:", cost_value)
         print(Counter(all_results))
 
-
     def create_circuit_evaluator(self, params):
         trials = self.training_params['trials']
-        cost_value = 0
+        circuit_outputs = []
         for i in range(trials):
-            encoding = self.get_encoding_from_circuit(gate_params=params)
-            cost_value += self.calculate_cost_once(encoding)
-        cost_value = -cost_value / trials
+            circuit_outputs.append(self.get_circuit_output(gate_params=params))
 
-        log = {'Fitness': cost_value}
-
-        return cost_value, log
-
+        return circuit_outputs
 
     def build_circuit(self, gate_params):
         eng, q = sf.Engine(self.n_qmodes)
@@ -103,43 +119,19 @@ class MaxCutSolver(object):
         circuit['q'] = q
         return circuit
 
-    def create_cov_matrix(self):
-        base = self.graph_params['base']
-        A = self.graph_params['A']
-        c = self.graph_params['c']
-        d = self.graph_params['d']
-        
-        I = np.eye(2 * self.n_qmodes)
-        X_top = np.hstack((np.zeros((self.n_qmodes, self.n_qmodes)), np.eye(self.n_qmodes)))
-        X_bot = np.hstack((np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
-        X = np.vstack((X_top, X_bot))
-
-        if base == "x":
-            zeros = np.zeros((self.n_qmodes,self.n_qmodes))
-            c_prim = self.graph_params['c_prim']
-            A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2 * self.n_qmodes) * c_prim
-            cov_matrix = np.linalg.inv(I - X@(d * A_prim)) - I/2
-        elif base == "xp":
-            cov_matrix = np.linalg.inv(I - X@(d * A)) - I/2
-        return cov_matrix
-
-    def get_encoding_from_circuit(self, gate_params):
-
-        def value_to_probability(value):
-            return np.tanh(value)
-
+    def get_circuit_output(self, gate_params):
         circuit = self.build_circuit(gate_params)
         eng = circuit['eng']
         state = eng.run("gaussian")
-      
+        output = []
+
         mu_list = []
         cov_list = []
         for i in range(self.n_qmodes):
             mu_list.append(state.reduced_gaussian([i])[0])
             cov_list.append(state.reduced_gaussian([i])[1])
 
-        encoding = []
-        if self.graph_params['base'] == 'x':
+        if self.base == 'x':
             x_list = []
             if self.training_params['measure']:
                 for i in range(self.n_qmodes):
@@ -148,19 +140,18 @@ class MaxCutSolver(object):
                 for i in range(self.n_qmodes):
                     x_list.append(mu_list[i][0])
             for x in x_list:
-                encoding.append(value_to_probability(x))
+                output.append(x)
 
-        elif self.graph_params['base'] == 'xp':
+        elif self.base == 'xp':
             x_list = []
             p_list = []
             for i in range(self.n_qmodes):
                 x_list.append(np.random.multivariate_normal(mu_list[i], cov_list[i])[0])
                 p_list.append(np.random.multivariate_normal(mu_list[i], cov_list[i])[1])
             for i in range(self.n_qmodes):
-                encoding.append(value_to_probability(x_list[i]))
-                encoding.append(value_to_probability(p_list[i]))
-
-        return encoding  
+                output.append(x_list[i])
+                output.append(p_list[i])
+        return output  
 
     def calculate_cost_once(self, encoding):
         cost_value = 0
@@ -169,14 +160,23 @@ class MaxCutSolver(object):
                 cost_value += 0.25 * self.A[i][j] * (encoding[i] - encoding[j])**2
         return cost_value
 
+    def loss_function(self, circuit_output):
+
+        def values_scaling(values):
+            return np.tanh(values)
+
+        cost_value = 0
+        trials = self.training_params['trials']
+        for single_output in circuit_output:
+            cost_value += self.calculate_cost_once(values_scaling(single_output))
+        cost_value = -cost_value / trials
+        return cost_value
+
+    def regularizer(self, regularized_params):
+        return l2(regularized_params)
+
+
     def assess_all_solutions_clasically(self):
         all_possible_solutions = list(itertools.product([0, 1], repeat=len(self.A)))
         for solution in all_possible_solutions:
             print(solution, self.calculate_cost_once(solution))
-
-
-def regularizer(regularized_params):
-    return l2(regularized_params)
-
-def loss_function(circuit_output):
-    return circuit_output
