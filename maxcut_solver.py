@@ -25,20 +25,21 @@ class MaxCutSolver(object):
         self.training_params = training_params
         self.graph_params = graph_params
         self.gates_structure = gates_structure
-        self.base = graph_params['base']
+        self.base = training_params['base']
         self.A = graph_params['A']
         self.learner_params['init_circuit_params'] = self.get_list_of_gate_params()
 
-        if self.base == "x":
+        coding = self.graph_params['coding']
+        if coding == "2N":
             n_qmodes = self.A.shape[0]
-        elif self.base == "xp":
+        elif coding == "N":
             n_qmodes = int(0.5 * self.A.shape[0])
 
         self.n_qmodes = n_qmodes
         self.learner = None
 
     def create_cov_matrix(self):
-        base = self.graph_params['base']
+        coding = self.graph_params['coding']
         A = self.graph_params['A']
         c = self.graph_params['c']
         d = self.graph_params['d']
@@ -48,12 +49,12 @@ class MaxCutSolver(object):
         X_bot = np.hstack((np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
         X = np.vstack((X_top, X_bot))
 
-        if base == "x":
+        if coding == "2N":
             zeros = np.zeros((self.n_qmodes,self.n_qmodes))
             c_prim = self.graph_params['c_prim']
             A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2 * self.n_qmodes) * c_prim
             cov_matrix = np.linalg.inv(I - X@(d * A_prim)) - I/2
-        elif base == "xp":
+        elif coding == "N":
             cov_matrix = np.linalg.inv(I - X@(d * A)) - I/2
         return cov_matrix
 

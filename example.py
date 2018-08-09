@@ -16,7 +16,7 @@ def main():
     graph_params['c_prim'] = 1
     graph_params['d'] = 0.05
     graph_params['A'] = A
-    graph_params['base'] = 'x' #'xp'
+    graph_params['coding'] = '2N' #'N'
 
     # learner_params = {
     #     'task': 'optimization',
@@ -30,7 +30,8 @@ def main():
     # training_params = {
     #     'steps': 2,
     #     'trials': 1,
-    #     'measure': True
+    #     'measure': True,
+    #     'base': 'x'
     #     }
 
 # Measure false params:
@@ -46,7 +47,8 @@ def main():
     training_params = {
         'steps': 50,
         'trials': 10,
-        'measure': False
+        'measure': False,
+        'base': 'x' # 'xp'
         }
 
 
