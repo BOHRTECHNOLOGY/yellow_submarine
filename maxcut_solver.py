@@ -4,7 +4,6 @@ import numpy as np
 from qmlt.numerical import CircuitLearner
 from qmlt.numerical.helpers import make_param
 from qmlt.numerical.regularizers import l2
-from functools import partial, partialmethod
 import itertools
 from collections import Counter
 import pdb
@@ -181,53 +180,3 @@ def regularizer(regularized_params):
 
 def loss_function(circuit_output):
     return circuit_output
-
-def main():
-
-    c = 1
-    A = np.array([[c, -2, -10, 1],
-        [-2, c, 1, 5],
-        [-10, 1, c, -2],
-        [1, 5, -2, c]])
-
-    graph_params = {}
-    graph_params['c'] = 1
-    graph_params['c_prim'] = 1
-    graph_params['d'] = 0.05
-    graph_params['A'] = A
-    graph_params['base'] = 'x' #'xp'
-
-    learner_params = {
-        'task': 'optimization',
-        'loss': loss_function,
-        'regularizer': regularizer,
-        'regularization_strength': 0.5,
-        'optimizer': 'SGD',
-        'init_learning_rate': 1e-7,
-        'log_every': 1,
-        'plot': True
-        }
-
-    training_params = {
-        'steps': 50,
-        'trials': 100,
-        'measure': True
-        }
-
-    gates_structure = []
-    gates_structure.append(ParametrizedGate(Dgate, 0, [make_param(constant=0.1, name='displacement_0', regularize=True, monitor=True)]))
-    gates_structure.append(ParametrizedGate(Dgate, 1, [make_param(constant=0.1, name='displacement_1', regularize=True, monitor=True)]))
-    gates_structure.append(ParametrizedGate(Dgate, 2, [make_param(constant=0.1, name='displacement_2', regularize=True, monitor=True)]))
-    gates_structure.append(ParametrizedGate(Dgate, 3, [make_param(constant=0.1, name='displacement_3', regularize=True, monitor=True)]))
-    gates_structure.append(ParametrizedGate(Sgate, 0, [make_param(constant=0.1, name='squeeze_0', regularize=True, monitor=True)]))
-    gates_structure.append(ParametrizedGate(Sgate, 1, [make_param(constant=0.1, name='squeeze_1', regularize=True, monitor=True)]))
-    gates_structure.append(ParametrizedGate(Sgate, 2, [make_param(constant=0.1, name='squeeze_2', regularize=True, monitor=True)]))
-    gates_structure.append(ParametrizedGate(Sgate, 3, [make_param(constant=0.1, name='squeeze_3', regularize=True, monitor=True)]))
-    # gates_structure.append(ParametrizedGate(BSgate, (0, 1), [make_param(constant=0.1, name='bs_00', regularize=True, monitor=True),
-    #               make_param(constant=0.1, name='bs_01', regularize=True, monitor=True)]))
-    max_cut_solver = MaxCutSolver(learner_params, training_params, graph_params, gates_structure)
-    max_cut_solver.train_and_evaluate_circuit()
-    max_cut_solver.assess_all_solutions_clasically()
-
-if __name__ == '__main__':
-    main()
