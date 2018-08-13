@@ -148,7 +148,7 @@ def _plot(x, y, ax=None, xlabel=None, ylabel=None, **plot_kw):
     if xlabel is not None:
         ax.set_xlabel(xlabel)
     if ylabel is not None:
-        ax.set_ylabel(ylabel)
+        ax.set_title(ylabel)
 
     ax.plot(x, y, **plot_kw)
 
