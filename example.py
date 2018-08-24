@@ -16,38 +16,33 @@ def main():
     graph_params['c_prim'] = 1
     graph_params['d'] = 0.05
     graph_params['A'] = A
-    graph_params['base'] = 'x' #'xp'
+    graph_params['coding'] = 'regular' #'half'
 
-    # learner_params = {
-    #     'task': 'optimization',
-    #     'regularization_strength': 0.5,
-    #     'optimizer': 'SGD',
-    #     'init_learning_rate': 1e-7,
-    #     'log_every': 1,
-    #     'plot': True
-    #     }
-
-    # training_params = {
-    #     'steps': 2,
-    #     'trials': 1,
-    #     'measure': True
-    #     }
-
-# Measure false params:
     learner_params = {
         'task': 'optimization',
         'regularization_strength': 0.5,
         'optimizer': 'SGD',
-        'init_learning_rate': 6e-3,
+        'init_learning_rate': 5e-3,
         'log_every': 1,
         'plot': True
         }
 
     training_params = {
-        'steps': 50,
-        'trials': 10,
-        'measure': False
+        'steps': 2,
+        'trials': 1,
+        'measure': True,
+        'base': 'fock_x', #'x', 'xp'
+        'cutoff_dim': 5
         }
+
+    # This is a failsafe - for some reasons if we do the measurements, 
+    # we need much much smaller learning rate.
+    # If you accidentally make it too big, it breaks your training and it may
+    # take you some time to figure out what happened.
+    if training_params['measure']:
+        print("Warning! changed value of init_learning_rate ")
+        learner_params['init_learning_rate'] = 1e-7
+
 
 
     gates_structure = []

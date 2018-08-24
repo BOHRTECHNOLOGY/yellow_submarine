@@ -25,20 +25,23 @@ class MaxCutSolver(object):
         self.training_params = training_params
         self.graph_params = graph_params
         self.gates_structure = gates_structure
-        self.base = graph_params['base']
+        self.base = training_params['base']
         self.A = graph_params['A']
         self.learner_params['init_circuit_params'] = self.get_list_of_gate_params()
+        if self.base == 'fock_x' and not self.training_params['measure']:
+            raise Exception("Base fock_x and measure==False is not implemented")
 
-        if self.base == "x":
+        coding = self.graph_params['coding']
+        if coding == "regular":
             n_qmodes = self.A.shape[0]
-        elif self.base == "xp":
+        elif coding == "half":
             n_qmodes = int(0.5 * self.A.shape[0])
 
         self.n_qmodes = n_qmodes
         self.learner = None
 
     def create_cov_matrix(self):
-        base = self.graph_params['base']
+        coding = self.graph_params['coding']
         A = self.graph_params['A']
         c = self.graph_params['c']
         d = self.graph_params['d']
@@ -48,12 +51,12 @@ class MaxCutSolver(object):
         X_bot = np.hstack((np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
         X = np.vstack((X_top, X_bot))
 
-        if base == "x":
+        if coding == "regular":
             zeros = np.zeros((self.n_qmodes,self.n_qmodes))
             c_prim = self.graph_params['c_prim']
             A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2 * self.n_qmodes) * c_prim
             cov_matrix = np.linalg.inv(I - X@(d * A_prim)) - I/2
-        elif base == "xp":
+        elif coding == "half":
             cov_matrix = np.linalg.inv(I - X@(d * A)) - I/2
         return cov_matrix
 
@@ -72,8 +75,10 @@ class MaxCutSolver(object):
 
         for name, value in final_params.items():
             print("Parameter {} has the final value {}.".format(name, value))
-
-        trials = 1000
+        if self.base == 'fock_x':
+            trials = 10
+        else:
+            trials = 1000
         cost_value = 0
         all_results = []
         for i in range(trials):
@@ -108,11 +113,13 @@ class MaxCutSolver(object):
         with eng:
             Gaussian(cov_matrix) | q
             for gate in self.gates_structure:
-                for qmode in range(self.n_qmodes):
-                    if len(gate.params) == 1:
-                        gate.gate(gate.params[0]['val']) | gate.qubits
-                    elif len(gate.params) == 2:
-                        gate.gate(gate.params[0]['val'], gate.params[1]['val']) | gate.qubits
+                if len(gate.params) == 1:
+                    gate.gate(gate.params[0]['val']) | gate.qubits
+                elif len(gate.params) == 2:
+                    gate.gate(gate.params[0]['val'], gate.params[1]['val']) | gate.qubits
+            if self.training_params['measure'] and self.base == 'fock_x':
+                for qubit in q:
+                    MeasureX | qubit
 
         circuit = {}
         circuit['eng'] = eng
@@ -120,6 +127,12 @@ class MaxCutSolver(object):
         return circuit
 
     def get_circuit_output(self, gate_params):
+        if self.base == 'x' or self.base == 'xp':
+            return self.get_circuit_output_for_gaussian(gate_params)
+        elif self.base == 'fock_x':
+            return self.get_circuit_output_for_fock(gate_params)
+
+    def get_circuit_output_for_gaussian(self, gate_params):
         circuit = self.build_circuit(gate_params)
         eng = circuit['eng']
         state = eng.run("gaussian")
@@ -152,6 +165,17 @@ class MaxCutSolver(object):
                 output.append(x_list[i])
                 output.append(p_list[i])
         return output  
+
+    def get_circuit_output_for_fock(self, gate_params):
+        circuit = self.build_circuit(gate_params)
+        eng = circuit['eng']
+        encoding = []
+        state = eng.run('fock', cutoff_dim=self.training_params['cutoff_dim'])
+        
+        if self.base == 'fock_x':
+            circuit_output = [q.val for q in circuit['q']]
+
+        return circuit_output
 
     def calculate_cost_once(self, encoding):
         cost_value = 0
