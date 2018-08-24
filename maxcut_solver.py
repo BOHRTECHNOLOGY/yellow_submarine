@@ -113,11 +113,10 @@ class MaxCutSolver(object):
         with eng:
             Gaussian(cov_matrix) | q
             for gate in self.gates_structure:
-                for qmode in range(self.n_qmodes):
-                    if len(gate.params) == 1:
-                        gate.gate(gate.params[0]['val']) | gate.qubits
-                    elif len(gate.params) == 2:
-                        gate.gate(gate.params[0]['val'], gate.params[1]['val']) | gate.qubits
+                if len(gate.params) == 1:
+                    gate.gate(gate.params[0]['val']) | gate.qubits
+                elif len(gate.params) == 2:
+                    gate.gate(gate.params[0]['val'], gate.params[1]['val']) | gate.qubits
             if self.training_params['measure'] and self.base == 'fock_x':
                 for qubit in q:
                     MeasureX | qubit
