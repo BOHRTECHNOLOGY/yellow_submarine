@@ -14,7 +14,7 @@ class ParametrizedGate(object):
         self.gate = gate
         self.qubits = qubits
         self.params = params
-        
+
 
 class MaxCutSolver(object):
     """This method allows to embed graphs as """
@@ -75,7 +75,7 @@ class MaxCutSolver(object):
 
         for name, value in final_params.items():
             print("Parameter {} has the final value {}.".format(name, value))
-        if self.base == 'fock_x':
+        if self.base == 'fock_x' or self.base == 'tf':
             trials = 10
         else:
             trials = 1000
@@ -117,7 +117,7 @@ class MaxCutSolver(object):
                     gate.gate(gate.params[0]['val']) | gate.qubits
                 elif len(gate.params) == 2:
                     gate.gate(gate.params[0]['val'], gate.params[1]['val']) | gate.qubits
-            if self.training_params['measure'] and self.base == 'fock_x':
+            if self.training_params['measure'] and (self.base == 'fock_x' or self.base == 'tf')
                 for qubit in q:
                     MeasureX | qubit
 
@@ -131,6 +131,8 @@ class MaxCutSolver(object):
             return self.get_circuit_output_for_gaussian(gate_params)
         elif self.base == 'fock_x':
             return self.get_circuit_output_for_fock(gate_params)
+        elif self.base == 'tf':
+            return self.get_circuit_output_for_tf(gate_params)
 
     def get_circuit_output_for_gaussian(self, gate_params):
         circuit = self.build_circuit(gate_params)
@@ -164,16 +166,26 @@ class MaxCutSolver(object):
             for i in range(self.n_qmodes):
                 output.append(x_list[i])
                 output.append(p_list[i])
-        return output  
+        return output
 
     def get_circuit_output_for_fock(self, gate_params):
         circuit = self.build_circuit(gate_params)
         eng = circuit['eng']
         encoding = []
         state = eng.run('fock', cutoff_dim=self.training_params['cutoff_dim'])
-        
+
         if self.base == 'fock_x':
             circuit_output = [q.val for q in circuit['q']]
+
+        return circuit_output
+
+    def get_circuit_output_for_tf(self, gate_params):
+        circuit = self.build_circuit(gate_params)
+        eng = circuit['eng']
+        encoding = []
+        state = eng.run('tf', cutoff_dim=self.training_params['cutoff_dim'])
+
+        circuit_output = [q.val for q in circuit['q']]
 
         return circuit_output
 
