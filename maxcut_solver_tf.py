@@ -27,12 +27,11 @@ class MaxCutSolver(object):
         self.training_params = training_params
         self.graph_params = graph_params
         self.gates_structure = gates_structure
-        self.base = training_params['base']
         self.A = graph_params['A']
 
         self.n_qmodes = self.A.shape[0]
         self.learner = None
-        
+
     def get_list_of_gate_params(self):
         init_params = []
         for gate in self.gates_structure:
@@ -53,6 +52,7 @@ class MaxCutSolver(object):
         return tf.stack(circuit_outputs)
 
     def build_circuit(self):
+        cov_matrix = self.create_cov_matrix()
         params_counter = 0
         gates = []
         for gate_structure in self.gates_structure:
@@ -60,6 +60,7 @@ class MaxCutSolver(object):
 
         eng, q = sf.Engine(self.n_qmodes)
         with eng:
+            Gaussian(cov_matrix) | q
             for gate in gates:
                 gate.gate(gate.params[0]) | gate.qubits
  
@@ -93,8 +94,31 @@ class MaxCutSolver(object):
         outer_product = tf.multiply(tf.add(outer_product, tf.constant(0.25)), tf.constant(2.0))
         result = tf.reduce_sum(tf.multiply(outer_product, A_tensor))
         result = tf.multiply(result, tf.constant(0.5))
+        # init = tf.global_variables_initializer()
+        # with tf.Session() as sess:
+        #     sess.run(init)
+        #     result_num = sess.run(result)
+        # print("RESULT:", result_num)
 
         return result
+
+
+    def create_cov_matrix(self):
+        coding = self.graph_params['coding']
+        A = self.graph_params['A']
+        c = self.graph_params['c']
+        d = self.graph_params['d']
+        
+        I = np.eye(2 * self.n_qmodes)
+        X_top = np.hstack((np.zeros((self.n_qmodes, self.n_qmodes)), np.eye(self.n_qmodes)))
+        X_bot = np.hstack((np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
+        X = np.vstack((X_top, X_bot))
+
+        zeros = np.zeros((self.n_qmodes,self.n_qmodes))
+        c_prim = self.graph_params['c_prim']
+        A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2 * self.n_qmodes) * c_prim
+        cov_matrix = np.linalg.inv(I - X@(d * A_prim)) - I/2
+        return cov_matrix
 
     def regularizer(self, regularized_params):
         return tf.nn.l2_loss(regularized_params)
