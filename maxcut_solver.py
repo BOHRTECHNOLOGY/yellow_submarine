@@ -14,7 +14,7 @@ class ParametrizedGate(object):
         self.gate = gate
         self.qubits = qubits
         self.params = params
-        
+
 
 class MaxCutSolver(object):
     """This method allows to embed graphs as """
@@ -164,14 +164,14 @@ class MaxCutSolver(object):
             for i in range(self.n_qmodes):
                 output.append(x_list[i])
                 output.append(p_list[i])
-        return output  
+        return output
 
     def get_circuit_output_for_fock(self, gate_params):
         circuit = self.build_circuit(gate_params)
         eng = circuit['eng']
         encoding = []
         state = eng.run('fock', cutoff_dim=self.training_params['cutoff_dim'])
-        
+
         if self.base == 'fock_x':
             circuit_output = [q.val for q in circuit['q']]
 
