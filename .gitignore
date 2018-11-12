@@ -1,1 +1,4 @@
 logsNUM/
+__pycache__/*
+logsAUTO/*
+*.pyc
