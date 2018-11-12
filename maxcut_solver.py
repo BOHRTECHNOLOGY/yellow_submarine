@@ -75,7 +75,7 @@ class MaxCutSolver(object):
 
         for name, value in final_params.items():
             print("Parameter {} has the final value {}.".format(name, value))
-        if self.base == 'fock_x' or self.base == 'tf':
+        if self.base == 'fock_x':
             trials = 10
         else:
             trials = 1000
@@ -117,7 +117,7 @@ class MaxCutSolver(object):
                     gate.gate(gate.params[0]['val']) | gate.qubits
                 elif len(gate.params) == 2:
                     gate.gate(gate.params[0]['val'], gate.params[1]['val']) | gate.qubits
-            if self.training_params['measure'] and (self.base == 'fock_x' or self.base == 'tf')
+            if self.training_params['measure'] and self.base == 'fock_x':
                 for qubit in q:
                     MeasureX | qubit
 

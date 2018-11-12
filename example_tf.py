@@ -29,12 +29,6 @@ def main():
         'cutoff_dim': 5
         }
 
-    # This is a failsafe - for some reasons if we do the measurements, 
-    # we need much much smaller learning rate.
-    # If you accidentally make it too big, it breaks your training and it may
-    # take you some time to figure out what happened.
-
-
 
     gates_structure = []
     gates_structure.append([Dgate, 0, {"constant": np.random.random() - 0.5, "name": 'displacement_0', 'regularize': True, 'monitor': True}])
