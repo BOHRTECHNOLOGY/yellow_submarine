@@ -131,8 +131,6 @@ class MaxCutSolver(object):
             return self.get_circuit_output_for_gaussian(gate_params)
         elif self.base == 'fock_x':
             return self.get_circuit_output_for_fock(gate_params)
-        elif self.base == 'tf':
-            return self.get_circuit_output_for_tf(gate_params)
 
     def get_circuit_output_for_gaussian(self, gate_params):
         circuit = self.build_circuit(gate_params)
@@ -176,16 +174,6 @@ class MaxCutSolver(object):
 
         if self.base == 'fock_x':
             circuit_output = [q.val for q in circuit['q']]
-
-        return circuit_output
-
-    def get_circuit_output_for_tf(self, gate_params):
-        circuit = self.build_circuit(gate_params)
-        eng = circuit['eng']
-        encoding = []
-        state = eng.run('tf', cutoff_dim=self.training_params['cutoff_dim'])
-
-        circuit_output = [q.val for q in circuit['q']]
 
         return circuit_output
 
