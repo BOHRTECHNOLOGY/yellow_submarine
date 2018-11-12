@@ -40,9 +40,9 @@ def main():
     gates_structure.append([Sgate, 2, {"constant": np.random.random() - 0.5, "name": 'squeeze_2', 'regularize': True, 'monitor': True}])
     gates_structure.append([Sgate, 3, {"constant": np.random.random() - 0.5, "name": 'squeeze_3', 'regularize': True, 'monitor': True}])
 
+    gates_structure.append([BSgate, (0, 1), {"constant": 0.1, "name": 'bs_00', 'regularize': True, 'monitor': True}, {"constant": 0.1, "name": 'bs_01', 'regularize': True, 'monitor': True}])
+    gates_structure.append([BSgate, (1, 3), {"constant": 0.1, "name": 'bs_10', 'regularize': True, 'monitor': True}, {"constant": 0.1, "name": 'bs_11', 'regularize': True, 'monitor': True}])
 
-    # gates_structure.append(ParametrizedGate(BSgate, (0, 1), [make_param(constant=0.1, name='bs_00', regularize=True, monitor=True),
-    #               make_param(constant=0.1, name='bs_01', regularize=True, monitor=True)]))
     max_cut_solver = MaxCutSolver(learner_params, training_params, graph_params, gates_structure)
     max_cut_solver.train_and_evaluate_circuit()
     max_cut_solver.assess_all_solutions_clasically()
