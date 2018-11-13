@@ -12,9 +12,9 @@ import tensorflow as tf
 
 class ParametrizedGate(object):
     """Simple class to keep data"""
-    def __init__(self, gate, qubits, params):
+    def __init__(self, gate, qumodes, params):
         self.gate = gate
-        self.qubits = qubits
+        self.qumodes = qumodes
         self.params = params
 
 
@@ -31,12 +31,6 @@ class MaxCutSolver(object):
 
         self.n_qmodes = self.A.shape[0]
         self.learner = None
-
-    def get_list_of_gate_params(self):
-        init_params = []
-        for gate in self.gates_structure:
-            init_params += gate.params
-        return init_params
 
     def train_and_evaluate_circuit(self):
         self.learner_params['circuit'] = self.create_circuit_evaluator
@@ -76,13 +70,21 @@ class MaxCutSolver(object):
         params_counter = 0
         gates = []
         for gate_structure in self.gates_structure:
-            gates.append(ParametrizedGate(gate_structure[0], gate_structure[1], [make_param(**gate_structure[2])]))
+            if len(gate_structure) == 3:
+                gates.append(ParametrizedGate(gate_structure[0], gate_structure[1], [make_param(**gate_structure[2])]))
+            elif len(gate_structure) == 4:
+                gates.append(ParametrizedGate(gate_structure[0], gate_structure[1], [make_param(**gate_structure[2]), make_param(**gate_structure[3])]))
 
         eng, q = sf.Engine(self.n_qmodes)
         with eng:
             Gaussian(cov_matrix) | q
             for gate in gates:
-                gate.gate(gate.params[0]) | gate.qubits
+                if len(gate.params) == 1:
+                    gate.gate(gate.params[0]) | gate.qumodes
+                elif len(gate.params) == 2:
+                    gate.gate(gate.params[0], gate.params[1]) | gate.qumodes
+                
+
             for qubit in q:
                 Measure | qubit
 
