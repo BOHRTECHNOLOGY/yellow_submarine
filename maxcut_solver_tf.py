@@ -20,7 +20,7 @@ class ParametrizedGate(object):
 
 class MaxCutSolver(object):
     """This method allows to embed graphs as """
-    def __init__(self, learner_params, training_params, graph_params, gates_structure):
+    def __init__(self, learner_params, training_params, graph_params, gates_structure, log={}):
         self.learner_params = learner_params
         self.learner_params['loss'] = self.loss_function
         self.learner_params['regularizer'] = self.regularizer
@@ -31,11 +31,12 @@ class MaxCutSolver(object):
 
         self.n_qmodes = self.A.shape[0]
         self.learner = None
+        self.log = log
 
     def train_and_evaluate_circuit(self):
         self.learner_params['circuit'] = self.create_circuit_evaluator
         self.learner = CircuitLearner(hyperparams=self.learner_params)
-        self.learner.train_circuit(steps=self.training_params['steps'])
+        self.learner.train_circuit(steps=self.training_params['steps'], tensors_to_log=self.log)
 
         final_params = self.learner.get_circuit_parameters()
         
@@ -82,11 +83,10 @@ class MaxCutSolver(object):
                 if len(gate.params) == 1:
                     gate.gate(gate.params[0]) | gate.qumodes
                 elif len(gate.params) == 2:
-                    gate.gate(gate.params[0], gate.params[1]) | gate.qumodes
-                
+                    gate.gate(gate.params[0], gate.params[1]) | gate.qumodes                
 
-            for qubit in q:
-                Measure | qubit
+            for qumode in q:
+                Measure | qumode
 
         circuit = {}
         circuit['eng'] = eng
@@ -100,8 +100,8 @@ class MaxCutSolver(object):
         encoding = []
         state = eng.run('tf', cutoff_dim=self.training_params['cutoff_dim'], eval=False)
 
-        all_probs = state.all_fock_probs()
-        max_prob = tf.reduce_max(tf.real(all_probs))
+        trace = tf.identity(state.trace(), name='trace')
+        
         if test:
             init = tf.global_variables_initializer()
             with tf.Session() as sess:
@@ -109,6 +109,8 @@ class MaxCutSolver(object):
                 result_num = sess.run(all_probs)
             pdb.set_trace()
         #TODO: do we want to have one output or probabilities of outputs?
+        # all_probs = state.all_fock_probs()
+        # max_prob = tf.reduce_max(tf.real(all_probs))
         # circuit_output = tf.cast(tf.where(tf.equal(tf.real(all_probs), max_prob)), dtype=tf.float32)
         # circuit_output = tf.clip_by_value(circuit_output, 0, 1)
         # circuit_output = tf.identity(circuit_output)
