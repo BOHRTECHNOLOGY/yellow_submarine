@@ -72,7 +72,7 @@ class MaxCutSolver(object):
         for gate_structure in self.gates_structure:
             if len(gate_structure) == 3:
                 gates.append(ParametrizedGate(gate_structure[0], gate_structure[1], [make_param(**gate_structure[2])]))
-            else:
+            elif len(gate_structure) == 4:
                 gates.append(ParametrizedGate(gate_structure[0], gate_structure[1], [make_param(**gate_structure[2]), make_param(**gate_structure[3])]))
 
         eng, q = sf.Engine(self.n_qmodes)
