@@ -31,36 +31,60 @@ Summary
 -------
 
 .. autosummary::
-    sample_from_distr
+    sample_from_distribution
 
 Code details
 ------------
 """
 
-
 import numpy as np
+import tensorflow as tf
 
-
-def sample_from_distr(distr):
+def sample_from_distribution(distribution):
     r"""
     Sample a Fock state from a nested probability distribution of Fock states.
 
     Args:
-        distr (ndarray): Nested array containing probabilities of Fock state.
-          Fock state :math:`|i,j,k \rangle` is retrieved by ``distr([i,j,k])``.
+        distribution (ndarray): Nested array containing probabilities of Fock state.
+          Fock state :math:`|i,j,k \rangle` is retrieved by ``distribution([i,j,k])``.
           Can be the result of :func:`state.all_fock_probs`.
 
     Return: List of photon numbers representing a Fock state.
     """
 
-    distr = np.array(distr)
-    cutoff = distr.shape[0]
-    num_modes = len(distr.shape)
+    distribution = np.array(distribution)
+    cutoff = distribution.shape[0]
+    num_modes = len(distribution.shape)
 
-    probs_flat = np.reshape(distr, (-1))
+    probs_flat = tf.reshape(distribution, [-1])
     indices_flat = np.arange(len(probs_flat))
     indices = np.reshape(indices_flat, [cutoff] * num_modes)
-    smpl_index = np.random.choice(indices_flat, p=probs_flat / sum(probs_flat))
-    fock_state = np.asarray(np.where(indices == smpl_index)).flatten()
+    sample_index = np.random.choice(indices_flat, p=probs_flat / sum(probs_flat))
+    fock_state = np.asarray(np.where(indices == sample_index)).flatten()
+
+    return fock_state
+
+
+def sample_from_distribution_tf(distribution):
+    r"""
+    Sample a Fock state from a nested probability distribution of Fock states.
+
+    Args:
+        distribution (ndarray): Nested array containing probabilities of Fock state.
+          Fock state :math:`|i,j,k \rangle` is retrieved by ``distribution([i,j,k])``.
+          Can be the result of :func:`state.all_fock_probs`.
+
+    Return: List of photon numbers representing a Fock state.
+    """
+    cutoff = distribution.shape[0].value
+    num_modes = len(distribution.shape)
+
+    probs_flat = tf.reshape(distribution, [-1])
+    rescaled_probs = tf.expand_dims(tf.log(probs_flat), 0)
+    indices_flat = tf.range(probs_flat.shape[0])
+    indices = tf.reshape(indices_flat, [cutoff] * num_modes)
+
+    sample_index = tf.squeeze(tf.multinomial(rescaled_probs, 1),[0])
+    fock_state = tf.reshape(tf.where(tf.equal(indices, tf.cast(sample_index, dtype=tf.int32))), [-1])
 
     return fock_state

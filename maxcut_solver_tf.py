@@ -3,6 +3,7 @@ from strawberryfields.ops import *
 import numpy as np
 from qmlt.tf import CircuitLearner
 from qmlt.tf.helpers import make_param
+from qmlt.helpers import sample_from_distribution_tf
 import itertools
 from collections import Counter
 import pdb
@@ -85,8 +86,8 @@ class MaxCutSolver(object):
                 elif len(gate.params) == 2:
                     gate.gate(gate.params[0], gate.params[1]) | gate.qumodes                
 
-            for qumode in q:
-                Measure | qumode
+            # for qumode in q:
+            #     Measure | qumode
 
         circuit = {}
         circuit['eng'] = eng
@@ -99,28 +100,29 @@ class MaxCutSolver(object):
         eng = circuit['eng']
         encoding = []
         state = eng.run('tf', cutoff_dim=self.training_params['cutoff_dim'], eval=False)
+        all_probs = state.all_fock_probs()
+        measurements = []
+        for i in range(self.training_params['trials']):
+            measurements.append(sample_from_distribution_tf(tf.real(all_probs)))
+        circuit_output = tf.stack(measurements)
 
         trace = tf.identity(state.trace(), name='trace')
-        
         if test:
             init = tf.global_variables_initializer()
             with tf.Session() as sess:
                 sess.run(init)
-                result_num = sess.run(all_probs)
+                all_probs_num = sess.run(result)
             pdb.set_trace()
-        #TODO: do we want to have one output or probabilities of outputs?
-        # all_probs = state.all_fock_probs()
-        # max_prob = tf.reduce_max(tf.real(all_probs))
-        # circuit_output = tf.cast(tf.where(tf.equal(tf.real(all_probs), max_prob)), dtype=tf.float32)
-        # circuit_output = tf.clip_by_value(circuit_output, 0, 1)
-        # circuit_output = tf.identity(circuit_output)
-        circuit_output = tf.cast(tf.stack([q.val for q in circuit['q']]), dtype=tf.float32)
-        circuit_output = tf.clip_by_value(circuit_output, 0, 1)
-
         return circuit_output
 
     def loss_function(self, circuit_output):
-        # circuit_output = circuit_output[0]
+        loss_values = tf.map_fn(self.loss_for_single_output, circuit_output, dtype=tf.float32)
+        result = tf.reduce_mean(loss_values)
+        init = tf.global_variables_initializer()
+        return result
+
+    def loss_for_single_output(self, circuit_output):
+        circuit_output = tf.cast(circuit_output, dtype=tf.float32)
         A_tensor = tf.constant(self.A, dtype=tf.float32, name='A_matrix')
         plus_minus_vector = tf.add(circuit_output, tf.constant(-0.5))
         plus_minus_vector = tf.reshape(plus_minus_vector, [self.n_qmodes])
@@ -128,19 +130,7 @@ class MaxCutSolver(object):
         outer_product = tf.multiply(tf.add(outer_product, tf.constant(0.25)), tf.constant(2.0))
         result = tf.reduce_sum(tf.multiply(outer_product, A_tensor))
         result = tf.multiply(result, tf.constant(0.5))
-        # TOO: THIS IS HACK!
-        # scaled_result = tf.add(result, 5.5)
-        # init = tf.global_variables_initializer()
-        # with tf.Session() as sess:
-        #     sess.run(init)
-        #     result_num = sess.run(result)
-        #     scaled_result_num = sess.run(scaled_result)
-        #     a_num = sess.run(A_tensor)
-        # print("RESULT:", a_num)
-        # pdb.set_trace()
-
         return result
-
 
     def create_cov_matrix(self):
         A = self.graph_params['A']

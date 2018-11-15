@@ -25,8 +25,9 @@ def main():
         }
 
     training_params = {
-        'steps': 20,
-        'cutoff_dim': 5
+        'steps': 10,
+        'trials': 10,
+        'cutoff_dim': 3
         }
 
     log = {'Trace': 'trace'}
