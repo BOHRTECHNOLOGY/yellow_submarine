@@ -25,7 +25,7 @@ class MaxCutSolver():
         self.gates_structure = gates_structure
         self.A = graph_params['A']
 
-        self.n_qmodes = self.A.shape[0]
+        self.n_qumodes = self.A.shape[0]
         self.learner = None
         if log is None:
             self.log = {}
@@ -76,7 +76,7 @@ class MaxCutSolver():
                 gates.append(ParametrizedGate(gate_structure[0], gate_structure[1], [make_param(**gate_structure[2]), make_param(**gate_structure[3])]))
 
         pdb.set_trace()
-        eng, q = sf.Engine(self.n_qmodes)
+        eng, q = sf.Engine(self.n_qumodes)
         with eng:
             Gaussian(cov_matrix) | q
             for gate in gates:
@@ -125,7 +125,7 @@ class MaxCutSolver():
         circuit_output = tf.cast(circuit_output, dtype=tf.float32)
         A_tensor = tf.constant(self.A, dtype=tf.float32, name='A_matrix')
         plus_minus_vector = tf.add(circuit_output, tf.constant(-0.5))
-        plus_minus_vector = tf.reshape(plus_minus_vector, [self.n_qmodes])
+        plus_minus_vector = tf.reshape(plus_minus_vector, [self.n_qumodes])
         outer_product = tf.einsum('i,j->ij', plus_minus_vector, -plus_minus_vector)
         outer_product = tf.multiply(tf.add(outer_product, tf.constant(0.25)), tf.constant(2.0))
         result = tf.reduce_sum(tf.multiply(outer_product, A_tensor))
@@ -137,14 +137,14 @@ class MaxCutSolver():
         c = self.graph_params['c']
         d = self.graph_params['d']
         
-        I = np.eye(2 * self.n_qmodes)
-        X_top = np.hstack((np.zeros((self.n_qmodes, self.n_qmodes)), np.eye(self.n_qmodes)))
-        X_bot = np.hstack(-(np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
+        I = np.eye(2 * self.n_qumodes)
+        X_top = np.hstack((np.zeros((self.n_qumodes, self.n_qumodes)), np.eye(self.n_qumodes)))
+        X_bot = np.hstack(-(np.eye(self.n_qumodes), np.zeros((self.n_qumodes, self.n_qumodes))))
         X = np.vstack((X_top, X_bot))
 
-        zeros = np.zeros((self.n_qmodes,self.n_qmodes))
+        zeros = np.zeros((self.n_qumodes,self.n_qumodes))
         c_prim = self.graph_params['c_prim']
-        A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2 * self.n_qmodes) * c_prim
+        A_prim = np.vstack((np.hstack((zeros, A)), np.hstack((A, zeros)))) + np.eye(2 * self.n_qumodes) * c_prim
         cov_matrix = np.linalg.inv(I - X@(d * A_prim)) - I/2
         return cov_matrix
 
