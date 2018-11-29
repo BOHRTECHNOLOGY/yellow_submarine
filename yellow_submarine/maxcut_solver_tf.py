@@ -9,19 +9,14 @@ from collections import Counter
 import pdb
 from functools import partial
 import tensorflow as tf
+from collections import namedtuple
 
 
-class ParametrizedGate(object):
-    """Simple class to keep data"""
-    def __init__(self, gate, qumodes, params):
-        self.gate = gate
-        self.qumodes = qumodes
-        self.params = params
+ParametrizedGate = namedtuple('ParametrizedGate', 'gate qumodes params')
 
-
-class MaxCutSolver(object):
+class MaxCutSolver():
     """This method allows to embed graphs as """
-    def __init__(self, learner_params, training_params, graph_params, gates_structure, log={}):
+    def __init__(self, learner_params, training_params, graph_params, gates_structure, log=None):
         self.learner_params = learner_params
         self.learner_params['loss'] = self.loss_function
         self.learner_params['regularizer'] = self.regularizer
@@ -32,7 +27,10 @@ class MaxCutSolver(object):
 
         self.n_qmodes = self.A.shape[0]
         self.learner = None
-        self.log = log
+        if log is None:
+            self.log = {}
+        else:
+            self.log = log
 
     def train_and_evaluate_circuit(self):
         self.learner_params['circuit'] = self.create_circuit_evaluator
@@ -77,6 +75,7 @@ class MaxCutSolver(object):
             elif len(gate_structure) == 4:
                 gates.append(ParametrizedGate(gate_structure[0], gate_structure[1], [make_param(**gate_structure[2]), make_param(**gate_structure[3])]))
 
+        pdb.set_trace()
         eng, q = sf.Engine(self.n_qmodes)
         with eng:
             Gaussian(cov_matrix) | q
@@ -103,7 +102,8 @@ class MaxCutSolver(object):
         all_probs = state.all_fock_probs()
         measurements = []
         for i in range(self.training_params['trials']):
-            measurements.append(sample_from_distribution_tf(tf.real(all_probs)))
+            # measurements.append(sample_from_distribution_tf(tf.x(all_probs)))
+            measurements.append(sample_from_distribution_tf(all_probs))
         circuit_output = tf.stack(measurements)
 
         trace = tf.identity(state.trace(), name='trace')
@@ -139,7 +139,7 @@ class MaxCutSolver(object):
         
         I = np.eye(2 * self.n_qmodes)
         X_top = np.hstack((np.zeros((self.n_qmodes, self.n_qmodes)), np.eye(self.n_qmodes)))
-        X_bot = np.hstack((np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
+        X_bot = np.hstack(-(np.eye(self.n_qmodes), np.zeros((self.n_qmodes, self.n_qmodes))))
         X = np.vstack((X_top, X_bot))
 
         zeros = np.zeros((self.n_qmodes,self.n_qmodes))
