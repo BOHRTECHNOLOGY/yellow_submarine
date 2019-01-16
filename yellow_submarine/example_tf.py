@@ -4,13 +4,13 @@ from strawberryfields.ops import *
 
 def main():
 
-    c = 1
+
+    c = 3
     A = np.array([[c, 1, 1, 0],
         [1, c, 1, 1],
         [1, 1, c, 1],
         [0, 1, 1, c]])
     # TODO add check for eigenvalues 1 and -1
-    A = 2 * A
     print("Eigenvalues: ", np.linalg.eigvals(A))
 
     interferometer_matrix = \

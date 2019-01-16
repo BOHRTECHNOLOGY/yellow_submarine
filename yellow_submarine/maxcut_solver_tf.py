@@ -41,7 +41,8 @@ class MaxCutSolver():
         final_params = self.learner.get_circuit_parameters()
         
         for name, value in final_params.items():
-            print("Parameter {} has the final value {}.".format(name, value))
+            if "Variable" not in name:
+                print("Parameter {} has the final value {}.".format(name, value))
 
         for gate in self.gates_structure:
             gate_name = gate[2]['name']
@@ -135,7 +136,6 @@ class MaxCutSolver():
     def loss_function(self, circuit_output):
         loss_values = tf.map_fn(self.loss_for_single_output, circuit_output, dtype=tf.float32)
         result = tf.reduce_mean(loss_values)
-        init = tf.global_variables_initializer()
         return result
 
     def loss_for_single_output(self, circuit_output):
@@ -156,7 +156,7 @@ class MaxCutSolver():
         cost_value = 0
         for i in range(len(encoding)):
             for j in range(len(encoding)):
-                cost_value += 0.25 * self.adj_matrix[i][j] * (encoding[i] - encoding[j])**2
+                cost_value += 0.5 * self.adj_matrix[i][j] * (encoding[i] - encoding[j])**2
         return cost_value
 
     def assess_all_solutions_clasically(self):
