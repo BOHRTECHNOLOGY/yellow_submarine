@@ -121,7 +121,9 @@ class MaxCutSolver():
         all_probs = state.all_fock_probs()
         measurements = []
         for i in range(self.training_params['trials']):
-            measurements.append(sample_from_distribution_tf(all_probs))
+            single_output = sample_from_distribution_tf(all_probs)
+            single_output = tf.clip_by_value(single_output, 0, 1)
+            measurements.append(single_output)
         circuit_output = tf.stack(measurements)
 
         trace = tf.identity(state.trace(), name='trace')
