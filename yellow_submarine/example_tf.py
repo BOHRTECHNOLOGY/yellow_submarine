@@ -13,6 +13,15 @@ def main():
     A = 2 * A
     print("Eigenvalues: ", np.linalg.eigvals(A))
 
+    interferometer_matrix = \
+        np.array(
+            [[1, -1, 1, -1],
+            [1, 1, 1, 1],
+            [-1, -1, 1, 1],
+            [1, -1, -1, 1]
+            ]) / 2
+
+    matrices = [A, interferometer_matrix]
     learner_params = {
         'task': 'optimization',
         'regularization_strength': 0.5,
@@ -46,7 +55,7 @@ def main():
     gates_structure.append([Kgate, 2, {"constant": np.random.random() - 0.5, "name": 'kerr_2', 'regularize': True, 'monitor': True}])
     gates_structure.append([Kgate, 3, {"constant": np.random.random() - 0.5, "name": 'kerr_3', 'regularize': True, 'monitor': True}])
 
-    max_cut_solver = MaxCutSolver(learner_params, training_params, A, gates_structure, log=log)
+    max_cut_solver = MaxCutSolver(learner_params, training_params, matrices, gates_structure, log=log)
     max_cut_solver.train_and_evaluate_circuit()
     max_cut_solver.assess_all_solutions_clasically()
 

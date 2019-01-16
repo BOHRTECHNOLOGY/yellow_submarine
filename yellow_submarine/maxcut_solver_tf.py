@@ -17,13 +17,14 @@ ParametrizedGate = namedtuple('ParametrizedGate', 'gate qumodes params')
 
 class MaxCutSolver():
     """This method allows to embed graphs as """
-    def __init__(self, learner_params, training_params, adj_matrix, gates_structure, log=None):
+    def __init__(self, learner_params, training_params, matrices, gates_structure, log=None):
         self.learner_params = learner_params
         self.learner_params['loss'] = self.loss_function
         self.learner_params['regularizer'] = self.regularizer
         self.training_params = training_params
         self.gates_structure = gates_structure
-        self.adj_matrix = adj_matrix
+        self.adj_matrix = matrices[0]
+        self.interferometer_matrix = matrices[1]
 
         self.n_qumodes = self.adj_matrix.shape[0]
         self.learner = None
@@ -92,12 +93,12 @@ class MaxCutSolver():
             for gate in sgates:
                 gate.gate(gate.params[0]) | gate.qumodes
 
-            Interferometer(U) | q
+            Interferometer(self.interferometer_matrix) | q
 
             for gate in dgates:
                 gate.gate(gate.params[0]) | gate.qumodes
 
-            Interferometer(U) | q
+            Interferometer(self.interferometer_matrix) | q
 
             for gate in kgates:
                 gate.gate(gate.params[0]) | gate.qumodes
