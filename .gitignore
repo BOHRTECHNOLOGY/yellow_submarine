@@ -2,3 +2,4 @@ logsNUM/
 __pycache__/*
 logsAUTO/*
 *.pyc
+yellow_submarine/logsAUTO/*
