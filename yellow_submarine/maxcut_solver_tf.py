@@ -6,7 +6,6 @@ from qmlt.tf.helpers import make_param
 import itertools
 from collections import Counter
 import pdb
-from functools import partial
 import tensorflow as tf
 from collections import namedtuple
 from strawberryfields.decompositions import takagi
@@ -153,17 +152,3 @@ class MaxCutSolver():
         for indices in np.ndindex(cost_array.shape):
             cost_array[indices] = self.calculate_cost_once(np.clip(indices,0,1))
         return cost_array
-
-
-def sample_from_distribution_tf(distribution):
-    cutoff = distribution.shape[0].value
-    num_modes = len(distribution.shape)
-
-    probs_flat = tf.reshape(distribution, [-1])
-    rescaled_probs = tf.expand_dims(tf.log(probs_flat), 0)
-    indices_flat = tf.range(probs_flat.shape[0])
-    indices = tf.reshape(indices_flat, [cutoff] * num_modes)
-
-    sample_index = tf.squeeze(tf.multinomial(rescaled_probs, 1))
-    fock_state = tf.reshape(tf.where(tf.equal(indices, tf.cast(sample_index, dtype=tf.int32))), [-1])
-    return fock_state
