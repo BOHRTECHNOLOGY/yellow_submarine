@@ -11,8 +11,6 @@ import tensorflow as tf
 from collections import namedtuple
 from strawberryfields.decompositions import takagi
 
-from scipy.stats import unitary_group
-
 ParametrizedGate = namedtuple('ParametrizedGate', 'gate qumodes params')
 
 class MaxCutSolver():
@@ -25,8 +23,8 @@ class MaxCutSolver():
         self.gates_structure = gates_structure
         self.adj_matrix = matrices[0]
         self.interferometer_matrix = matrices[1]
-
         self.n_qumodes = self.adj_matrix.shape[0]
+        self.cost_array = self.prepare_cost_array()
         self.learner = None
         if log is None:
             self.log = {}
@@ -62,8 +60,7 @@ class MaxCutSolver():
             cost_value = sess.run(cost_tensor)
 
         print("Total cost:", cost_value)
-        print("Result:", circuit_output)
-
+ 
     def create_circuit_evaluator(self):
         return self.get_circuit_output()
 
@@ -104,9 +101,6 @@ class MaxCutSolver():
             for gate in kgates:
                 gate.gate(gate.params[0]) | gate.qumodes
 
-            # for qumode in q:
-            #     Measure | qumode
-
         circuit = {}
         circuit['eng'] = eng
         circuit['q'] = q
@@ -119,36 +113,23 @@ class MaxCutSolver():
         encoding = []
         state = eng.run('tf', cutoff_dim=self.training_params['cutoff_dim'], eval=False)
         all_probs = state.all_fock_probs()
-        measurements = []
-        for i in range(self.training_params['trials']):
-            single_output = sample_from_distribution_tf(all_probs)
-            single_output = tf.clip_by_value(single_output, 0, 1)
-            measurements.append(single_output)
-        circuit_output = tf.stack(measurements)
-
+        circuit_output = all_probs
         trace = tf.identity(state.trace(), name='trace')
+        
         if test:
             init = tf.global_variables_initializer()
             with tf.Session() as sess:
                 sess.run(init)
-                all_probs_num = sess.run(result)
+                all_probs_num = sess.run(all_probs)
             pdb.set_trace()
+
         return circuit_output
 
     def loss_function(self, circuit_output):
-        loss_values = tf.map_fn(self.loss_for_single_output, circuit_output, dtype=tf.float32)
-        result = tf.reduce_mean(loss_values)
-        return result
-
-    def loss_for_single_output(self, circuit_output):
-        circuit_output = tf.cast(circuit_output, dtype=tf.float32)
-        adj_tensor = tf.constant(self.adj_matrix, dtype=tf.float32, name='adj_matrix')
-        plus_minus_vector = tf.add(circuit_output, tf.constant(-0.5))
-        plus_minus_vector = tf.reshape(plus_minus_vector, [self.n_qumodes])
-        outer_product = tf.einsum('i,j->ij', plus_minus_vector, -plus_minus_vector)
-        outer_product = tf.multiply(tf.add(outer_product, tf.constant(0.25)), tf.constant(2.0))
-        result = tf.reduce_sum(tf.multiply(outer_product, adj_tensor))
-        result = tf.multiply(result, tf.constant(0.5))
+        cost_tensor = tf.constant(self.cost_array, dtype=tf.float32, name='cost_tensor')
+        weighted_cost_tensor = tf.multiply(cost_tensor, circuit_output)
+        result = tf.reduce_sum(weighted_cost_tensor)
+        result = tf.multiply(result, tf.constant(-1.0))
         return result
 
     def regularizer(self, regularized_params):
@@ -166,6 +147,13 @@ class MaxCutSolver():
         for solution in all_possible_solutions:
             print(solution, self.calculate_cost_once(solution))
 
+    def prepare_cost_array(self):
+        cutoff = self.training_params['cutoff_dim']
+        cost_array = np.zeros([cutoff] * self.n_qumodes)
+        for indices in np.ndindex(cost_array.shape):
+            cost_array[indices] = self.calculate_cost_once(np.clip(indices,0,1))
+        return cost_array
+
 
 def sample_from_distribution_tf(distribution):
     cutoff = distribution.shape[0].value
@@ -176,7 +164,6 @@ def sample_from_distribution_tf(distribution):
     indices_flat = tf.range(probs_flat.shape[0])
     indices = tf.reshape(indices_flat, [cutoff] * num_modes)
 
-    multinomial_result = tf.Variable(tf.multinomial(rescaled_probs, 1))
-    sample_index = tf.squeeze(multinomial_result,[0])
+    sample_index = tf.squeeze(tf.multinomial(rescaled_probs, 1))
     fock_state = tf.reshape(tf.where(tf.equal(indices, tf.cast(sample_index, dtype=tf.int32))), [-1])
     return fock_state
