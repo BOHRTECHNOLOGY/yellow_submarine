@@ -24,14 +24,14 @@ def main():
     matrices = [A, interferometer_matrix]
     learner_params = {
         'task': 'optimization',
-        'regularization_strength': 2e-5,
+        'regularization_strength': 1e-4,
         'optimizer': 'SGD',
-        'init_learning_rate': 0.01,
+        'init_learning_rate': 0.1,
         'log_every': 1
         }
 
     training_params = {
-        'steps': 200,
+        'steps': 100,
         'cutoff_dim': 17
         }
 

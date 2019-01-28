@@ -59,6 +59,7 @@ class MaxCutSolver():
             cost_value = sess.run(cost_tensor)
 
         print("Total cost:", cost_value)
+        return cost_value
  
     def create_circuit_evaluator(self):
         return self.get_circuit_output()
