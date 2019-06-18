@@ -81,8 +81,12 @@ class MaxCutSolver():
     def train_and_evaluate_circuit(self):
         """
         Training and evalutation of the circuit.
+    
+        Adjusts the parameters of the circuit so the output minimizes 
+        the value of the loss function.
+        After training is complete, the cost value for the final circuit parameter
+        is evaluated.
 
-        %TODO: Give an explanation of how this training and evaluation happens for users.
         """
         self.learner_params['circuit'] = self._create_circuit_evaluator
         self.learner = CircuitLearner(hyperparams=self.learner_params)
@@ -117,9 +121,8 @@ class MaxCutSolver():
 
     def assess_all_solutions_clasically(self):
         """
-        Training and evalutation of the circuit.
-
-        %TODO: Give an explanation of how this assessment happens for users.
+        Iterates through all the solutions to MaxCut problem
+        and calculates the cost of each solution.
         """
         all_possible_solutions = list(itertools.product([0, 1], repeat = len(self.adj_matrix)))
         for solution in all_possible_solutions:
