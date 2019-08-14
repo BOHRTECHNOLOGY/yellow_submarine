@@ -63,7 +63,7 @@ class MaxCutSolver():
     def __init__(self, learner_params, training_params, matrices, gates_structure, log = None):
         self.learner_params = learner_params
         self.learner_params["loss"] = self._loss_function
-        self.learner_params["_regularizer"] = self._regularizer
+        self.learner_params["regularizer"] = self._regularizer
         self.training_params = training_params
         self.gates_structure = gates_structure
         self.adj_matrix = matrices[0]
