@@ -25,9 +25,9 @@ during training to provide the optimal solution.
 ## Results
 
 We carried researched on using this repository and the details of the investigation can be found at 
-![Yellow Submarine Research](https://github.com/BOHRTECHNOLOGY/public_research/tree/master/Experiments/Yellow_submarine).
+[Yellow Submarine Research](https://github.com/BOHRTECHNOLOGY/public_research/tree/master/Experiments/Yellow_submarine).
 
-The outcome of the research has been published and can be found ![Approaching graph problems with continuous variable quantum computing](https://arxiv.org/abs/1906.07047).
+The outcome of the research has been published and can be found [Approaching graph problems with continuous variable quantum computing](https://arxiv.org/abs/1906.07047).
 The repository linked above can be used to reproduce the research.
 
 
